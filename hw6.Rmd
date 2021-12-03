@@ -5,7 +5,142 @@ date: "12/3/2021"
 output: github_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r, message=FALSE}
+library(tidyverse)
+library(viridis)
+library(modelr)
+library(patchwork)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
 ```
 
+## Problem 1
+
+### Data Cleaning
+
+```{r message=FALSE}
+birth_weight= read_csv("./data/birthweight.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(babysex = as.factor(babysex),
+         frace = as.factor(frace),
+         malform = as.factor(malform),
+         mrace = as.factor(mrace)) %>% 
+  mutate(babysex = recode(babysex,"1" = "male","2" = "female"),
+         frace = recode(frace, "1" = "White", "2" = "Black", "3" = "Asian", "4" = "Puerto Rican", "8" = "Other",                        "9" = "Unknown"),
+         malform = recode(malform, "0" = "absent", "1" = "present"),
+         mrace = recode(mrace, "1" = "White", "2"= "Black", "3" = "Asian", "4" = "Puerto Rican", "8" = "Other"))
+```
+
+### check missing data
+
+```{r}
+ birth_weight %>% 
+  skimr::skim() %>% 
+  select(skim_variable, n_missing)
+```
+
+There is no missing values in the data set. 
+
+### Regression
+
+```{r}
+weight_fit = 
+  birth_weight  %>% 
+  lm(bwt ~ momage + smoken + ppbmi + fincome, data = .)  #proposed model
+```
+I proposed that baby’s birth weight associated with `fincome` (family income), `momage` (mother's age at delivery), `smoken` average number of cigarettes smoked per day during pregnancy and `ppbmi`mother’s pre-pregnancy BMI. 
+
+```{r}
+ birth_weight %>% 
+  modelr::add_residuals(weight_fit) %>% 
+  modelr::add_predictions(weight_fit) %>% 
+  ggplot(aes(x = pred, y = resid)) + geom_point()+
+  geom_smooth(se = FALSE, method = lm)
+```
+
+### Other two models
+
+Using length at birth and gestational age as predictors (main effects only)
+```{r}
+weight_fit = 
+  birth_weight %>% 
+    lm(bwt ~ momage + smoken + ppbmi + fincome, data = .)  #proposed model
+```
+
+```{r}
+weight_fit %>% 
+   broom::tidy() %>% 
+  knitr::kable(digits = 3)
+```
+
+Using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+
+```{r}
+birth_weight %>% 
+  lm(bwt ~ bhead + blength + babysex + bhead*blength 
+                 + bhead*babysex + blength*babysex + bhead*blength*babysex, 
+                 data = .) %>%
+  broom::tidy() 
+```
+
+```{r}
+cv_df = 
+  crossv_mc(birth_weight, 100) 
+```
+
+```{r}
+cv_df =
+  cv_df %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble))
+```
+
+```{r}
+cv_df = 
+  cv_df %>% 
+  mutate(
+    my_model_fit  = map(train, ~lm(bwt ~ momage + smoken + ppbmi + fincome, data =  birth_weight)),
+    fit_mod1  = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+    fit_mod2  = map(train, ~lm(bwt ~ bhead + blength + babysex + bhead*blength 
+                 + bhead*babysex + blength*babysex + bhead*blength*babysex, data = .x))) %>% 
+  mutate(
+    rmse_my_model = map2_dbl(my_model_fit, test, ~rmse(model = .x, data = .y)),
+    rmse_mod1 = map2_dbl(fit_mod1, test, ~rmse(model = .x, data = .y)),
+    rmse_mod2 = map2_dbl(fit_mod2, test, ~rmse(model = .x, data = .y)))
+```
+
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y =rmse, fill = model)) + geom_violin(alpha = .5) + 
+  geom_boxplot(alpha = .3) +
+  labs(
+    title = "RMSEs of the 3 models",
+    y = "Root Mean Squred Error",
+    x = "Models"
+  )
+```
+
+Problem 2
