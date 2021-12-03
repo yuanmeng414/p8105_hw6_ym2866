@@ -1,0 +1,11 @@
+---
+title: "Homework 6"
+author: "Yuan Meng"
+date: "12/3/2021"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
