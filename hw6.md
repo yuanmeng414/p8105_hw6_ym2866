@@ -199,3 +199,62 @@ cv_df %>%
 <img src="hw6_files/figure-gfm/unnamed-chunk-12-1.png" width="90%" />
 
 Problem 2
+
+``` r
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+    ## Registered S3 method overwritten by 'hoardr':
+    ##   method           from
+    ##   print.cache_info httr
+
+    ## using cached file: ~/Library/Caches/R/noaa_ghcnd/USW00094728.dly
+
+    ## date created (size, mb): 2021-10-07 10:26:59 (7.602)
+
+    ## file min/max dates: 1869-01-01 / 2021-10-31
+
+### R.squared
+
+``` r
+r_squared = 
+  weather_df %>% 
+  bootstrap(n = 5000, id = "strap_number") %>% 
+  mutate(
+    models = map(.x = strap, ~lm(tmax~tmin, data = .x)),
+    results = map(models, broom::glance)
+  ) %>% 
+  select(-models, -strap) %>% 
+  unnest(results) 
+```
+
+``` r
+r_squared %>% 
+  summarize(
+    ci_lower = quantile(r.squared, 0.025),
+    ci_upper = quantile(r.squared, 0.975)
+  )
+```
+
+    ## # A tibble: 1 × 2
+    ##   ci_lower ci_upper
+    ##      <dbl>    <dbl>
+    ## 1    0.894    0.928
+
+``` r
+r_squared %>% 
+  ggplot(aes(x = r.squared)) + 
+   geom_density() 
+```
+
+<img src="hw6_files/figure-gfm/unnamed-chunk-16-1.png" width="90%" />
