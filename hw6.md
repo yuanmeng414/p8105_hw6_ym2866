@@ -190,15 +190,16 @@ cv_df %>%
   ggplot(aes(x = model, y =rmse, fill = model)) + geom_violin(alpha = .5) + 
   geom_boxplot(alpha = .3) +
   labs(
-    title = "RMSEs of the 3 models",
-    y = "Root Mean Squred Error",
+    y = "RMSE",
     x = "Models"
   )
 ```
 
 <img src="hw6_files/figure-gfm/unnamed-chunk-12-1.png" width="90%" />
 
-Problem 2
+The model2 have the lowest RMSE, so it is the best model.
+
+## Problem 2
 
 ``` r
 weather_df = 
@@ -213,16 +214,6 @@ weather_df =
     tmax = tmax / 10) %>%
   select(name, id, everything())
 ```
-
-    ## Registered S3 method overwritten by 'hoardr':
-    ##   method           from
-    ##   print.cache_info httr
-
-    ## using cached file: ~/Library/Caches/R/noaa_ghcnd/USW00094728.dly
-
-    ## date created (size, mb): 2021-10-07 10:26:59 (7.602)
-
-    ## file min/max dates: 1869-01-01 / 2021-10-31
 
 ### R.squared
 
@@ -251,6 +242,8 @@ r_squared %>%
     ##      <dbl>    <dbl>
     ## 1    0.894    0.928
 
+### R.squared Plot
+
 ``` r
 r_squared %>% 
   ggplot(aes(x = r.squared)) + 
@@ -258,3 +251,53 @@ r_squared %>%
 ```
 
 <img src="hw6_files/figure-gfm/unnamed-chunk-16-1.png" width="90%" />
+
+### Log value
+
+``` r
+log_data = 
+  weather_df %>% 
+  bootstrap(n = 5000, id = "strap_number") %>% 
+  mutate(
+    models = map(.x = strap, ~lm(tmax~tmin, data = .x)),
+    results = map(models, broom::tidy)
+  ) %>% 
+  select(-models, -strap) %>%
+  unnest(results)
+```
+
+``` r
+log_result = 
+  log_data  %>% 
+  select(term, estimate) %>% 
+  pivot_wider(names_from = term, 
+              values_from = estimate,
+              values_fn = list
+              ) %>% 
+  unnest() %>% 
+  janitor::clean_names() %>% 
+  mutate(log_beta = log(intercept*tmin))
+```
+
+``` r
+log_result %>% 
+  summarize(
+    ci_lower = quantile(log_beta, 0.025),
+    ci_upper = quantile(log_beta, 0.975)
+  )
+```
+
+    ## # A tibble: 1 × 2
+    ##   ci_lower ci_upper
+    ##      <dbl>    <dbl>
+    ## 1     1.97     2.06
+
+### Log value Plot
+
+``` r
+log_result %>% 
+  ggplot(aes(x = log_beta))+  
+  geom_density()
+```
+
+<img src="hw6_files/figure-gfm/unnamed-chunk-20-1.png" width="90%" />

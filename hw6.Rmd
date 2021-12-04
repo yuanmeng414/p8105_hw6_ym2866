@@ -137,15 +137,16 @@ cv_df %>%
   ggplot(aes(x = model, y =rmse, fill = model)) + geom_violin(alpha = .5) + 
   geom_boxplot(alpha = .3) +
   labs(
-    title = "RMSEs of the 3 models",
-    y = "Root Mean Squred Error",
+    y = "RMSE",
     x = "Models"
   )
 ```
 
-Problem 2
+The model2 have the lowest RMSE, so it is the best model. 
 
-```{r}
+## Problem 2
+
+```{r message = FALSE}
 weather_df = 
   rnoaa::meteo_pull_monitors(
     c("USW00094728"),
@@ -183,9 +184,55 @@ r_squared %>%
     ci_upper = quantile(r.squared, 0.975)
   )
 ```
+### R.squared Plot
 
 ```{r}
 r_squared %>% 
   ggplot(aes(x = r.squared)) + 
    geom_density() 
 ```
+ 
+### Log value 
+
+```{r}
+log_data = 
+  weather_df %>% 
+  bootstrap(n = 5000, id = "strap_number") %>% 
+  mutate(
+    models = map(.x = strap, ~lm(tmax~tmin, data = .x)),
+    results = map(models, broom::tidy)
+  ) %>% 
+  select(-models, -strap) %>%
+  unnest(results)
+```
+
+
+```{r}
+log_result = 
+  log_data  %>% 
+  select(term, estimate) %>% 
+  pivot_wider(names_from = term, 
+              values_from = estimate,
+              values_fn = list
+              ) %>% 
+  unnest() %>% 
+  janitor::clean_names() %>% 
+  mutate(log_beta = log(intercept*tmin))
+```
+
+```{r}
+log_result %>% 
+  summarize(
+    ci_lower = quantile(log_beta, 0.025),
+    ci_upper = quantile(log_beta, 0.975)
+  )
+```
+
+### Log value Plot
+
+```{r}
+log_result %>% 
+  ggplot(aes(x = log_beta))+  
+  geom_density()
+```
+
