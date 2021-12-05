@@ -240,7 +240,7 @@ r_squared %>%
     ## # A tibble: 1 × 2
     ##   ci_lower ci_upper
     ##      <dbl>    <dbl>
-    ## 1    0.894    0.928
+    ## 1    0.894    0.927
 
 ### R.squared Plot
 
@@ -251,6 +251,21 @@ r_squared %>%
 ```
 
 <img src="hw6_files/figure-gfm/unnamed-chunk-16-1.png" width="90%" />
+
+``` r
+mean_r_squared = r_squared %>%
+  pull(r.squared) %>% 
+  mean()
+mean
+```
+
+    ## function (x, ...) 
+    ## UseMethod("mean")
+    ## <bytecode: 0x7fe05cbff4b0>
+    ## <environment: namespace:base>
+
+The plot appears to be normally distributed and mean is 0.911, which
+with a 95% Confidence Interval (0.894, 0.927).
 
 ### Log value
 
@@ -301,3 +316,16 @@ log_result %>%
 ```
 
 <img src="hw6_files/figure-gfm/unnamed-chunk-20-1.png" width="90%" />
+
+``` r
+mean_log = 
+  log_result %>%
+  pull(log_beta) %>% 
+  mean()
+mean_log
+```
+
+    ## [1] 2.013145
+
+The plot appears to be normally distributed and mean is 2.01, which with
+a 95% Confidence Interval (1.965, 2.059).

@@ -184,13 +184,21 @@ r_squared %>%
     ci_upper = quantile(r.squared, 0.975)
   )
 ```
+
 ### R.squared Plot
 
 ```{r}
 r_squared %>% 
   ggplot(aes(x = r.squared)) + 
    geom_density() 
+
+mean_r_squared = r_squared %>%
+  pull(r.squared) %>% 
+  mean()
+mean
 ```
+ 
+The plot appears to be normally distributed and mean is 0.911, which with a 95% Confidence Interval (0.894, 0.927).
  
 ### Log value 
 
@@ -234,5 +242,12 @@ log_result %>%
 log_result %>% 
   ggplot(aes(x = log_beta))+  
   geom_density()
+
+mean_log = 
+  log_result %>%
+  pull(log_beta) %>% 
+  mean()
+mean_log
 ```
 
+The plot appears to be normally distributed and mean is 2.01, which with a 95% Confidence Interval (1.965, 2.059).
